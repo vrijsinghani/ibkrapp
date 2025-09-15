@@ -214,4 +214,4 @@ docs/session_context*
 tests/*
 tools/testing/*
 *.dump
-db.sqlite3
+db.sqlite3*

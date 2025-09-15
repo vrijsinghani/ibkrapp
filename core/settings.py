@@ -15,7 +15,8 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib import messages
 from dotenv import load_dotenv
 from str2bool       import str2bool 
-import os, random, string
+from django.core.exceptions import ImproperlyConfigured
+import os, random, string, secrets
 
 load_dotenv()
 
@@ -28,21 +29,33 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY')
 if not SECRET_KEY:
-    SECRET_KEY = ''.join(random.choice( string.ascii_lowercase  ) for i in range( 32 ))
+    # Generate a strong secret for dev environments
+    alphabet = string.ascii_letters + string.digits + string.punctuation
+    SECRET_KEY = ''.join(secrets.choice(alphabet) for _ in range(64))
 
 # Enable/Disable DEBUG Mode
 DEBUG = str2bool(os.environ.get('DEBUG'))
+# Enforce minimum SECRET_KEY length in non-debug environments
+if not DEBUG and (not SECRET_KEY or len(SECRET_KEY) < 50):
+    raise ImproperlyConfigured("SECRET_KEY must be at least 50 characters in production.")
 #print(' DEBUG -> ' + str(DEBUG) ) 
 
-ALLOWED_HOSTS = ['*']
+def _env_list(name, default_list):
+    """Return a list from a comma-separated env var or a provided default."""
+    raw = os.getenv(name)
+    if not raw:
+        return default_list
+    return [item.strip() for item in raw.split(',') if item.strip()]
+
+ALLOWED_HOSTS = _env_list('ALLOWED_HOSTS', ['*'])
 
 # Used by DEBUG-Toolbar 
 INTERNAL_IPS = [
-    "127.0.0.1",
+    "127.0.0.1", "192.168.30.100"
 ]
 
 # Add here your deployment HOSTS
-CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://localhost:5085', 'http://127.0.0.1:8000', 'http://127.0.0.1:5085', 'https://django-soft-dash-pro.onrender.com'] 
+CSRF_TRUSTED_ORIGINS = _env_list('CSRF_TRUSTED_ORIGINS', ['http://localhost:8000', 'http://localhost:5085', 'http://127.0.0.1:8000', 'http://127.0.0.1:5085', 'https://django-soft-dash-pro.onrender.com', 'http://192.168.30.100:8000','http://192.168.30.100:5085']) 
 
 
 # Application definition
@@ -180,7 +193,7 @@ LANGUAGES = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/New_York'
 
 USE_I18N = True
 
@@ -262,7 +275,12 @@ CELERY_TASK_SERIALIZER    = 'json'
 CELERY_RESULT_SERIALIZER  = 'json'
 ########################################
 
-X_FRAME_OPTIONS = 'SAMEORIGIN'
+# Security flags (make them configurable via env; defaults are dev-friendly)
+SECURE_HSTS_SECONDS      = int(os.getenv('SECURE_HSTS_SECONDS', '0'))
+SECURE_SSL_REDIRECT      = str2bool(os.getenv('SECURE_SSL_REDIRECT', 'False'))
+SESSION_COOKIE_SECURE    = str2bool(os.getenv('SESSION_COOKIE_SECURE', 'False'))
+CSRF_COOKIE_SECURE       = str2bool(os.getenv('CSRF_COOKIE_SECURE', 'False'))
+X_FRAME_OPTIONS          = os.getenv('X_FRAME_OPTIONS', 'SAMEORIGIN')
 
 # ### API-GENERATOR Settings ###
 API_GENERATOR = {

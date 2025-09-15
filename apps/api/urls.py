@@ -1,8 +1,9 @@
-from django.urls import re_path
+from django.urls import path
 from django.views.decorators.csrf import csrf_exempt
 
-from apps.api.views import *
+from apps.api.views import SalesListCreateView, SalesDetailView
 
 urlpatterns = [
-	re_path("sales/((?P<pk>\d+)/)?", csrf_exempt(SalesView.as_view())),
+    path("sales/", csrf_exempt(SalesListCreateView.as_view())),
+    path("sales/<int:pk>/", csrf_exempt(SalesDetailView.as_view())),
 ]
